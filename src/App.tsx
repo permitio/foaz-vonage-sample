@@ -1,14 +1,15 @@
-import { ClerkProvider, RedirectToSignIn, SignedIn, SignedOut, useAuth } from '@clerk/clerk-react'
-import { Alert, Box, Button, Container, MenuItem, Paper, Select, TextField } from '@mui/material';
+import { ClerkProvider, RedirectToSignIn, SignedIn, SignedOut, useAuth, useClerk } from '@clerk/clerk-react'
+import { Alert, Box, Button, Container, Paper, TextField } from '@mui/material';
 import FormControl from '@mui/material/FormControl';
 import { FormEvent, useState } from 'react';
 
 const clerkPubKey = import.meta.env.VITE_REACT_APP_CLERK_PUBLISHABLE_KEY;
 
 const SendMessage = () => {
+  const { isSignedIn, getToken } = useAuth();
+  const { signOut } = useClerk();
   const [error, setError] = useState<string | null>('');
   const [success, setSuccess] = useState<string | null>('');
-  const { isSignedIn, getToken } = useAuth();
   const [to, setTo] = useState<string>('');
   const [message, setMessage] = useState<string>('');
 
@@ -24,18 +25,19 @@ const SendMessage = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': token,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           from: '14157386102',
           to,
           text: message,
           channel: 'sms',
-          messageType: 'text',
+          message_type: 'text',
         }),
       });
-      if (res.status !== 200) {
-        setError('Error sending message');
+      if (res.status !== 202) {
+        const body = await res.json();
+        setError(body?.detail || 'Error sending message');
         return;
       }
       setSuccess('Message sent');
@@ -43,7 +45,6 @@ const SendMessage = () => {
       setError(error.message);
       return;
     }
-
   }
 
   if (!isSignedIn) {
@@ -68,6 +69,7 @@ const SendMessage = () => {
           </Box>
           <Button variant="contained" type="submit" fullWidth sx={{ mt: 1 }}>Send</Button>
         </Paper>
+        <Button variant='outlined' fullWidth sx={{ mt: 1 }} onClick={() => (signOut())}>Sign Out</Button>
       </Container>
     </>
   )
